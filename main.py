@@ -126,8 +126,10 @@ class shortcut_keeper():
             layout (list): pysimplegui layout list
         """
         layout = [
-            [sg.Text("📜 About  Shortcut  Keeper",
-                     font=self.section_title_font)],
+            [
+                sg.Text("📜 About Shortcut Keeper", font=self.section_title_font),
+                sg.Text("(v0.1)", font=self.section_normal_font)
+            ],
             [sg.HorizontalSeparator()],
             [sg.Text("This app was created by M.Hammad Hassan",
                      font=self.section_normal_font)],
