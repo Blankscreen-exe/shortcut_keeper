@@ -1,6 +1,6 @@
 import PySimpleGUI as sg
 import os
-
+import json
 class shortcut_keeper():
     """
     This class represents an app that allows users to register and view quick launch shortcuts.
@@ -17,10 +17,8 @@ class shortcut_keeper():
         The default font of normal text.
     app_icon: str
         The file path to the app icon.
-    app_title: str
-        The default title of the app.
     app_id: str
-        The unique ID of the app.
+        The unique ID of the app (also the title of the app).
     window: PySimpleGUI.Window
         The main window of the app.
         
@@ -46,15 +44,21 @@ class shortcut_keeper():
     """
 
     def __init__(self):
-        self.app_theme = "Reddit"
+        self.setting_file = "sk_cfg.json"
+        self._settings = self.get_settings(self.setting_file)
+            
+        self.app_id = self._settings["app_settings"]["app_id"]
+        self.app_theme = self._settings["app_settings"]["app_theme"]
+        sg.theme(self.app_theme)
+        self.app_icon = "./edit.ico"
         self.window_size = (300, 220)
         self.section_title_font = ("Arcadeclassic", 17)
         self.section_normal_font = ("MS Sans Serif", 10)
-        self.app_icon = "./edit.ico"
-        self.app_title = "Shortcut Keeper"
-        self.app_id = "asd"
-        self.window = sg.Window(self.get_app_title(),
-                                self.tab_group(), icon=self.app_icon)
+        self.window = sg.Window(
+                                self.get_app_title(),
+                                self.tab_group(), 
+                                icon=self.app_icon
+                                )
 
     def get_registered_items_layout(self) -> list:
         """generates layout for List view of the registered items
@@ -139,7 +143,7 @@ class shortcut_keeper():
                      font=self.section_normal_font)],
             [sg.Text("For more information, please visit:",
                      font=self.section_normal_font)],
-            [sg.Text("🔗 https://www.abc.com", enable_events=True, font=("Consolas", 12),
+            [sg.Text("🔗 https://github.com/Blankscreen-exe", enable_events=True, font=("Consolas", 12),
                      text_color='#0F3FD8', background_color='#B2C00D', key="-ABOUT-LINK-")]
         ]
         return layout
@@ -187,6 +191,37 @@ class shortcut_keeper():
         ]
         return layout
 
+    def get_settings(self, setting_file) -> dict:
+        """reads data from json file
+
+        Returns:
+            data (dict): all settings and config
+        """
+        if os.path.isfile(setting_file):
+            with open(os.path.abspath(setting_file), "r") as file:
+                data = json.load(file)
+        else:
+            data = self.get_settings_file_template()
+            with open(os.path.abspath(setting_file), "w") as file:
+                json.dump(data, file)
+        return data
+    
+    def modify_settings(self, key, data) -> None:
+        """write the config file with given data
+
+        Args:
+            key (str): key to cfg json file. can be written as "key1.key2.key3"
+            data (any): data to store at the specified key
+        """
+        keys = key.split('.')
+        settings = self.get_settings(self.setting_file)
+        d = settings
+        for k in keys[:-1]:
+            d = d[k]
+        d[keys[-1]] = data
+        with open(os.path.abspath(self.setting_file), "w") as file:
+            json.dump(settings, file)
+    
     def add_registered_item(self, path) -> None:
         """adds/writes path to a file to the config file
 
@@ -195,9 +230,8 @@ class shortcut_keeper():
         """
         registered_items = self.get_registered_item()
         registered_items.append(path)
-        with open('sk_cfg.txt', 'w') as f:
-            for path in registered_items:
-                f.write(path + '\n')
+            
+        self.modify_settings("fileList", registered_items)
 
     def delete_registered_item(self, index) -> None:
         """deletes/removes path to a file from the config file
@@ -207,9 +241,7 @@ class shortcut_keeper():
         """
         registered_items = self.get_registered_item()
         del registered_items[index]
-        with open('sk_cfg.txt', 'w') as f:
-            for path in registered_items:
-                f.write(path + '\n')
+        self.modify_settings("fileList", registered_items)
 
     def tab_group(self) -> list:
         """config for displaying tabs
@@ -226,6 +258,32 @@ class shortcut_keeper():
             ])
         ]]
         return tab_group
+
+    def get_settings_file_template(self) -> dict:
+        """default template for the cfg json file
+
+        Returns:
+            dict: default settings template
+        """
+        try:
+            return {
+
+                        "app_settings":{
+                            "app_id": self.app_id,
+                            "app_theme": self.app_theme
+                        },
+                        "fileList": []
+                } 
+        except:
+            return {
+                    # f"{self.app_id}": {
+                        "app_settings":{
+                            "app_id": "Shortcut Keeper",
+                            "app_theme": "Reddit"
+                        },
+                        "fileList": []
+                    # }
+                }
 
     def get_window_size(self) -> tuple:
         """getter method for window_size
@@ -257,12 +315,8 @@ class shortcut_keeper():
         Returns:
             registered_items (list): list of paths
         """
-        registered_items = []
-        if os.path.isfile('sk_cfg.txt'):
-            with open('sk_cfg.txt', 'r') as f:
-                for path in f:
-                    registered_items.append(path.strip())
-        return registered_items
+        data = self.get_settings(self.setting_file)
+        return data["fileList"]
 
     def get_app_title(self) -> str:
         """getter method for app title
@@ -270,7 +324,7 @@ class shortcut_keeper():
         Returns:
             str: app's title
         """
-        return self.app_title
+        return self.app_id
 
     def reset_app_theme(self, theme) -> None:
         """sets app theme
@@ -279,6 +333,7 @@ class shortcut_keeper():
             theme (str): theme for the app
         """
         self.app_theme = theme
+        self.modify_settings("app_settings.app_theme", theme)
 
     def reset_app_title(self, title) -> None:
         """sets app theme
@@ -286,12 +341,13 @@ class shortcut_keeper():
         Args:
             theme (str): theme for the app
         """
-        self.app_title = title
+        self.app_id = title
+        self.modify_settings("app_settings.app_id", title)
+        
 
     def main(self) -> None:
         """Main window loop to start this app
         """
-        # sg.theme(self.app_theme)
         window = self.window
 
         while True:
@@ -325,7 +381,7 @@ class shortcut_keeper():
 
             # hyperlink events
             elif event == "-ABOUT-LINK-":
-                os.startfile("https://www.abc.com")
+                os.startfile("https://github.com/Blankscreen-exe/shortcut_keeper")
 
             # settings events
             elif event == "set_theme":
@@ -347,5 +403,4 @@ class shortcut_keeper():
 
 if __name__ == '__main__':
     App = shortcut_keeper()
-    sg.theme("Reddit")
     App.main()
