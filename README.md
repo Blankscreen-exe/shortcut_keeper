@@ -45,3 +45,15 @@ python -m pysimplegui-exemaker.pysimplegui-exemaker
 ## Preview
 
 ![preview](docs/images/preview.png)
+
+## Features
+
+- Create or delete shortcuts
+- Change Color Theme
+- Change App name
+
+## Further Development
+
+- [ ] enable multiple instances in the same directory
+- [ ] enable sharing of configuration file
+- [ ] enable name spacing shortcuts during registration
