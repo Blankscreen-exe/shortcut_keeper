@@ -1,6 +1,8 @@
 import PySimpleGUI as sg
 import os
 import json
+import uuid
+
 # for debug purposes
 from pprint import pprint as pp
 
@@ -25,7 +27,31 @@ class shortcut_keeper():
     window: PySimpleGUI.Window
         The main window of the app.
     """
-
+    
+    # ================================================
+    #                      CONSTANTS
+    # ================================================
+    
+    ITEM_CATEGORY_LIST = {
+            "General":"general", 
+            "Dev Tools":"dev_tools", 
+            "Documentations":"doc", 
+            "Study Resources":"study_resources", 
+            "Games":"games", 
+            "Other":"other", 
+        }
+        
+    # ================================================
+    #                  EVENT CONSTANTS
+    # ================================================
+    
+    # TODO: add event constants 
+    EVENTS = {}
+    
+    # ================================================
+    #                    CONSTRUCTOR
+    # ================================================
+        
     def __init__(self):
         self.setting_file = "sk_cfg.json"
         self._settings = self.get_settings(self.setting_file)
@@ -35,10 +61,13 @@ class shortcut_keeper():
         sg.theme(self.app_theme)
         self.app_icon = "./edit.ico"
         self.window_size = (320, 220)
+        
+        # fonts
         self.section_title_font = ("MS sans serif", 17, "bold")
         self.section_normal_font = ("MS sans serif", 11)
         self.section_hint_font = ("MS sans serif", 10, "bold")
         self.section_hint_font_color = "gray"
+        
         self.window = sg.Window(
                                 self.get_app_title(),
                                 self.tab_group(), 
@@ -59,10 +88,10 @@ class shortcut_keeper():
         list_of_registered_items = []
         for i, file_data in enumerate(registered_items):
             list_of_registered_items.append([
-                sg.Button("❎", key=f"{i}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
-                sg.Button("↗️", key=f"{i}_open_button", tooltip=f" Open {file_data['name']} "),
+                sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
+                sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
                 sg.Text(os.path.basename(file_data['name']),
-                        key=f"{i}_path_button", tooltip=file_data['path'])
+                        key=f"{file_data['key']}_path_button", tooltip=file_data['path'])
             ])
 
         empty_message = [
@@ -115,7 +144,13 @@ class shortcut_keeper():
                 sg.Text("(?)", font=self.section_hint_font, text_color=self.section_hint_font_color, tooltip=" Choose a file category ")
             ],
             [
-                sg.InputText(key="file_name_input", size=(30, 200)),
+                sg.DropDown(
+                    default_value=list(self.ITEM_CATEGORY_LIST.keys())[0],
+                    values=list(self.ITEM_CATEGORY_LIST.keys()),
+                    key="file_category_input",
+                    size=(30, 200),
+                    
+                ),
             ],
             [
                 sg.Button("Submit", key="submit_button")
@@ -305,25 +340,28 @@ class shortcut_keeper():
         data = self.get_settings(self.setting_file)
         return data["fileList"]
     
-    def add_item(self, path) -> None:
+    def add_item(self, file_obj) -> None:
         """adds/writes path to a file to the config file
 
         Args:
-            path (str): path to file
+            file_obj (dict): file data dictionary
         """
         registered_items = self.get_registered_items()
-        registered_items.append(path)
+        registered_items.append(file_obj)
             
         self.modify_settings("fileList", registered_items)
 
-    def delete_item(self, index) -> None:
+    def delete_item(self, key) -> None:
         """deletes/removes path to a file from the config file
 
         Args:
-            index (int): index of the path in the file
+            index (key): index of the path in the file
         """
         registered_items = self.get_registered_items()
-        del registered_items[index]
+        for i, item_key in enumerate(registered_items):
+            if key==item_key['key']:
+                del registered_items[i]
+                break
         self.modify_settings("fileList", registered_items)
 
     # ================================================
@@ -373,12 +411,21 @@ class shortcut_keeper():
         self.modify_settings("app_settings.app_id", title)
         
     # ================================================
+    #                 APP UTILITIES
+    # ================================================
+    
+    def get_uuid(self):
+        # make a UUID based on the host address and current time
+        return str(uuid.uuid1())
+    
+    # ================================================
     #                APP MAIN METHOD
     # ================================================
         
     def main(self) -> None:
         """Main window loop to start this app
         """
+
         window = self.window
 
         while True:
@@ -394,9 +441,13 @@ class shortcut_keeper():
             if event == "submit_button":
                 file_path = values["path_input"]
                 file_name = values["file_name_input"]
+                file_category = values["file_category_input"]
+                file_key = self.get_uuid()
                 file_data = {
+                    "key": file_key,
                     "name": file_name,
-                    "path": file_path
+                    "path": file_path,
+                    "category": file_category
                 }
                 self.add_item(file_data)
                 window.close()
@@ -404,8 +455,8 @@ class shortcut_keeper():
                                    self.tab_group(), icon=self.app_icon)
 
             elif event.endswith("_delete_button"):
-                index = int(event.split("_")[0])
-                self.delete_item(index)
+                key = (event.split("_")[0])
+                self.delete_item(key)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
