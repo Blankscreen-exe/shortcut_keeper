@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 import os
 import json
+
 class shortcut_keeper():
     """
     This class represents an app that allows users to register and view quick launch shortcuts.
@@ -21,26 +22,6 @@ class shortcut_keeper():
         The unique ID of the app (also the title of the app).
     window: PySimpleGUI.Window
         The main window of the app.
-        
-    Methods:
-    --------
-    get_registered_items_layout() -> list:
-        Generates the layout for the list view of the registered items.
-        
-    get_register_item_layout() -> list:
-        Generates the layout for the shortcut registration form.
-        
-    about_section() -> list:
-        Generates the layout for the about section.
-        
-    settings_layout() -> list:
-        Generates the layout for the settings section.
-        
-    add_registered_item(path: str) -> None:
-        Adds/writes the path to a file to the config file.
-        
-    delete_registered_item(index: int) -> None:
-        Deletes/removes the path to a file from the config file.
     """
 
     def __init__(self):
@@ -60,13 +41,17 @@ class shortcut_keeper():
                                 icon=self.app_icon
                                 )
 
+    # ================================================
+    #                      LAYOUTS
+    # ================================================
+
     def get_registered_items_layout(self) -> list:
         """generates layout for List view of the registered items
 
         Returns:
             layout (list): pysimplegui layout list
         """
-        registered_items = self.get_registered_item()
+        registered_items = self.get_registered_items()
         list_of_registered_items = []
         for i, path in enumerate(registered_items):
             list_of_registered_items.append([
@@ -93,18 +78,19 @@ class shortcut_keeper():
 
         layout = [
             [sg.HorizontalSeparator()],
-
             list_out
-
         ]
         return layout
 
-    def get_register_item_layout(self) -> list:
+    def get_add_item_layout(self) -> list:
         """shorcut registration form
 
         Returns:
             layout (list): pysimplegui layout list
         """
+        settings = self.get_settings(self.setting_file)
+        key_list = list(settings["fileList"].keys())
+        print(key_list)
         layout = [
             [sg.Text("📒 Register  an  Item", font=self.section_title_font)],
             [sg.HorizontalSeparator()],
@@ -113,13 +99,17 @@ class shortcut_keeper():
                 sg.InputText(key="path_input", size=(30, 200)),
                 sg.FileBrowse(file_types=(("All files", "*.*"),))
             ],
+            # [
+                # sg.DropDown(key_list, default_value=key_list[0], key="category_input"),
+            #     sg.Button("Add") 
+            # ],
             [
                 sg.Button("Submit", key="submit_button")
             ]
         ]
         return layout
 
-    def about_section(self) -> list:
+    def get_about_section_layout(self) -> list:
         """about section
 
         Returns:
@@ -150,7 +140,7 @@ class shortcut_keeper():
         ]
         return layout
 
-    def settings_layout(self) -> list:
+    def get_settings_layout(self) -> list:
         """settings section
 
         Returns:
@@ -183,7 +173,8 @@ class shortcut_keeper():
                     default_value=self.get_app_theme(),
                     values=self.get_app_theme_list(),
                     key="theme_dropdown",
-                    size=inp_size
+                    size=inp_size,
+                    
                 ),
                 sg.Button(
                     button_text="  Set  ",
@@ -193,6 +184,26 @@ class shortcut_keeper():
         ]
         return layout
 
+    def tab_group(self) -> list:
+        """config for displaying tabs
+
+        Returns:
+            tab_group (list): pysimplegui layout lists
+        """
+        tab_group = [[
+            sg.TabGroup([
+                [sg.Tab('List', self.get_registered_items_layout())],
+                [sg.Tab('Register Shortcuts', self.get_add_item_layout())],
+                [sg.Tab("Settings", self.get_settings_layout())],
+                [sg.Tab('About', self.get_about_section_layout())]
+            ])
+        ]]
+        return tab_group
+
+    # ================================================
+    #                  SETTINGS CRUD
+    # ================================================
+    
     def get_settings(self, setting_file) -> dict:
         """reads data from json file
 
@@ -224,43 +235,6 @@ class shortcut_keeper():
         with open(os.path.abspath(self.setting_file), "w") as file:
             json.dump(settings, file)
     
-    def add_registered_item(self, path) -> None:
-        """adds/writes path to a file to the config file
-
-        Args:
-            path (str): path to file
-        """
-        registered_items = self.get_registered_item()
-        registered_items.append(path)
-            
-        self.modify_settings("fileList", registered_items)
-
-    def delete_registered_item(self, index) -> None:
-        """deletes/removes path to a file from the config file
-
-        Args:
-            index (int): index of the path in the file
-        """
-        registered_items = self.get_registered_item()
-        del registered_items[index]
-        self.modify_settings("fileList", registered_items)
-
-    def tab_group(self) -> list:
-        """config for displaying tabs
-
-        Returns:
-            tab_group (list): pysimplegui layout lists
-        """
-        tab_group = [[
-            sg.TabGroup([
-                [sg.Tab('List', self.get_registered_items_layout())],
-                [sg.Tab('Register Shortcuts', self.get_register_item_layout())],
-                [sg.Tab("Settings", self.settings_layout())],
-                [sg.Tab('About', self.about_section())]
-            ])
-        ]]
-        return tab_group
-
     def get_settings_file_template(self) -> dict:
         """default template for the cfg json file
 
@@ -269,24 +243,21 @@ class shortcut_keeper():
         """
         try:
             return {
-
-                        "app_settings":{
-                            "app_id": self.app_id,
-                            "app_theme": self.app_theme
-                        },
-                        "fileList": []
+                    "app_settings":{
+                        "app_id": self.app_id,
+                        "app_theme": self.app_theme
+                    },
+                    "fileList": {}
                 } 
         except:
             return {
-                    # f"{self.app_id}": {
-                        "app_settings":{
-                            "app_id": "Shortcut Keeper",
-                            "app_theme": "Reddit"
-                        },
-                        "fileList": []
-                    # }
+                    "app_settings":{
+                        "app_id": "Shortcut Keeper",
+                        "app_theme": "Reddit"
+                    },
+                    "fileList": {}
                 }
-
+    
     def get_window_size(self) -> tuple:
         """getter method for window_size
 
@@ -294,6 +265,44 @@ class shortcut_keeper():
             tuple: (length, width,)
         """
         return self.window_size
+    
+    # ================================================
+    #                  SHORTCUT CRUD
+    # ================================================
+    
+    def get_registered_items(self) -> list:
+        """getter method for list of registered items (filess)
+
+        Returns:
+            registered_items (list): list of paths
+        """
+        data = self.get_settings(self.setting_file)
+        return data["fileList"]
+    
+    def add_item(self, path) -> None:
+        """adds/writes path to a file to the config file
+
+        Args:
+            path (str): path to file
+        """
+        registered_items = self.get_registered_items()
+        registered_items.append(path)
+            
+        self.modify_settings("fileList", registered_items)
+
+    def delete_item(self, index) -> None:
+        """deletes/removes path to a file from the config file
+
+        Args:
+            index (int): index of the path in the file
+        """
+        registered_items = self.get_registered_items()
+        del registered_items[index]
+        self.modify_settings("fileList", registered_items)
+
+    # ================================================
+    #                APP THEME & TITLE
+    # ================================================
 
     def get_app_theme(self) -> str:
         """getter method for app_theme
@@ -311,15 +320,6 @@ class shortcut_keeper():
         """
         return sg.theme_list()
 
-    def get_registered_item(self) -> list:
-        """getter method for list of registered items (filess)
-
-        Returns:
-            registered_items (list): list of paths
-        """
-        data = self.get_settings(self.setting_file)
-        return data["fileList"]
-
     def get_app_title(self) -> str:
         """getter method for app title
 
@@ -328,8 +328,8 @@ class shortcut_keeper():
         """
         return self.app_id
 
-    def reset_app_theme(self, theme) -> None:
-        """sets app theme
+    def update_app_theme(self, theme) -> None:
+        """changes app theme
 
         Args:
             theme (str): theme for the app
@@ -337,7 +337,7 @@ class shortcut_keeper():
         self.app_theme = theme
         self.modify_settings("app_settings.app_theme", theme)
 
-    def reset_app_title(self, title) -> None:
+    def update_app_title(self, title) -> None:
         """sets app theme
 
         Args:
@@ -346,18 +346,21 @@ class shortcut_keeper():
         self.app_id = title
         self.modify_settings("app_settings.app_id", title)
         
-
+    # ================================================
+    #                APP MAIN METHOD
+    # ================================================
+        
     def main(self) -> None:
         """Main window loop to start this app
         """
         window = self.window
 
         while True:
-
-            # set theme
-            sg.theme(self.app_theme)
+            print("APP THEME =====", self.app_theme)
             # read events and their values
             event, values = window.read()
+            # set theme
+            sg.theme(self.app_theme)
 
             if event in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
                 break
@@ -365,21 +368,21 @@ class shortcut_keeper():
             # shortcut events
             if event == "submit_button":
                 path = values["path_input"]
-                self.add_registered_item(path)
+                self.add_item(path)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
 
             elif event.endswith("_delete_button"):
                 index = int(event.split("_")[0])
-                self.delete_registered_item(index)
+                self.delete_item(index)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
 
             elif event.endswith("_open_button"):
                 index = int(event.split("_")[0])
-                os.startfile(self.get_registered_item()[index])
+                os.startfile(self.get_registered_items()[index])
 
             # hyperlink events
             elif event == "-ABOUT-LINK-":
@@ -388,14 +391,15 @@ class shortcut_keeper():
             # settings events
             elif event == "set_theme":
                 theme = values["theme_dropdown"]
-                self.reset_app_theme(theme)
+                self.update_app_theme(theme)
                 window.close()
+                sg.theme(self.app_theme)
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
 
             elif event == "set_app_title":
                 title = values["new_window_title"]
-                self.reset_app_title(title)
+                self.update_app_title(title)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
