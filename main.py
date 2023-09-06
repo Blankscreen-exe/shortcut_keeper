@@ -1,6 +1,8 @@
 import PySimpleGUI as sg
 import os
 import json
+# for debug purposes
+from pprint import pprint as pp
 
 class shortcut_keeper():
     """
@@ -53,12 +55,12 @@ class shortcut_keeper():
         """
         registered_items = self.get_registered_items()
         list_of_registered_items = []
-        for i, path in enumerate(registered_items):
+        for i, file_data in enumerate(registered_items):
             list_of_registered_items.append([
                 sg.Button("❎", key=f"{i}_delete_button"),
                 sg.Button("↗️", key=f"{i}_open_button"),
-                sg.Text(os.path.basename(path),
-                        key=f"{i}_path_button", tooltip=path)
+                sg.Text(os.path.basename(file_data['name']),
+                        key=f"{i}_path_button", tooltip=file_data['path'])
             ])
 
         empty_message = [
@@ -88,7 +90,6 @@ class shortcut_keeper():
         """
         settings = self.get_settings(self.setting_file)
         key_list = list(settings["fileList"])
-        print(key_list)
         layout = [
             [sg.Text("📋 Register  an  Item", font=self.section_title_font)],
             [sg.HorizontalSeparator()],
@@ -96,6 +97,10 @@ class shortcut_keeper():
             [
                 sg.InputText(key="path_input", size=(30, 200)),
                 sg.FileBrowse(file_types=(("All files", "*.*"),))
+            ],
+            [sg.Text("File Name: ", font=self.section_normal_font)],
+            [
+                sg.InputText(key="file_name_input", size=(30, 200)),
             ],
             [
                 sg.Button("Submit", key="submit_button")
@@ -280,7 +285,6 @@ class shortcut_keeper():
             path (str): path to file
         """
         registered_items = self.get_registered_items()
-        print(registered_items)
         registered_items.append(path)
             
         self.modify_settings("fileList", registered_items)
@@ -361,8 +365,13 @@ class shortcut_keeper():
 
             # shortcut events
             if event == "submit_button":
-                path = values["path_input"]
-                self.add_item(path)
+                file_path = values["path_input"]
+                file_name = values["file_name_input"]
+                file_data = {
+                    "name": file_name,
+                    "path": file_path
+                }
+                self.add_item(file_data)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
@@ -376,7 +385,7 @@ class shortcut_keeper():
 
             elif event.endswith("_open_button"):
                 index = int(event.split("_")[0])
-                os.startfile(self.get_registered_items()[index])
+                os.startfile(self.get_registered_items()[index]['path'])
 
             # hyperlink events
             elif event == "-ABOUT-LINK-":
