@@ -40,6 +40,8 @@ class shortcut_keeper():
             "Games":"games", 
             "Other":"other", 
         }
+    
+    FILTER = "All"
         
     # ================================================
     #                  EVENT CONSTANTS
@@ -84,20 +86,49 @@ class shortcut_keeper():
         Returns:
             layout (list): pysimplegui layout list
         """
+        count_of_list_item = 0
+        
         registered_items = self.get_registered_items()
+        
+        print("======== FILTER=======")
+        print(self.FILTER)
+        
         list_of_registered_items = []
+        
         for i, file_data in enumerate(registered_items):
-            list_of_registered_items.append([
-                sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
-                sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
-                sg.Text(os.path.basename(file_data['name']),
-                        key=f"{file_data['key']}_path_button", tooltip=file_data['path'])
-            ])
+            if self.FILTER=="All":
+                # item to be added to the list
+                item = [
+                    sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
+                    sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
+                    sg.Text(os.path.basename(file_data['name']),
+                            key=f"{file_data['key']}_path_button", tooltip=file_data['path'])
+                ]
+            
+            elif file_data['category'] == self.ITEM_CATEGORY_LIST[self.FILTER]:
+                # item to be added to the list
+                item = [
+                    sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
+                    sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
+                    sg.Text(
+                        os.path.basename(file_data['name']),
+                        font=self.section_normal_font, 
+                        tooltip=file_data['path']
+                        )
+                ]
+                
+            try:
+                list_of_registered_items.append(item)
+            except:
+                pass
+
+        print("======== UPDATEDLIST=======")
+        print(len(list_of_registered_items))
 
         empty_message = [
             [sg.Text("WOW Such Empty!", font=self.section_title_font, text_color="lightgray")]
         ]
-
+        
         final_list = [
             sg.Column(
                 empty_message if len(list_of_registered_items) == 0 else list_of_registered_items,
@@ -108,6 +139,16 @@ class shortcut_keeper():
         ]
 
         layout = [
+            [
+                sg.Text("Filter: ", font=self.section_normal_font),
+                sg.DropDown(
+                    default_value=self.FILTER,
+                    values=["All"]+list(self.ITEM_CATEGORY_LIST.keys()),
+                    key="file_list_by_category_view",
+                    size=(35, 220),
+                    enable_events=True
+                ),
+            ],
             [sg.HorizontalSeparator()],
             final_list
         ]
@@ -149,7 +190,6 @@ class shortcut_keeper():
                     values=list(self.ITEM_CATEGORY_LIST.keys()),
                     key="file_category_input",
                     size=(30, 200),
-                    
                 ),
             ],
             [
@@ -433,7 +473,7 @@ class shortcut_keeper():
             event, values = window.read()
             # set theme
             sg.theme(self.app_theme)
-
+            
             if event in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
                 break
 
@@ -441,7 +481,7 @@ class shortcut_keeper():
             if event == "submit_button":
                 file_path = values["path_input"]
                 file_name = values["file_name_input"]
-                file_category = values["file_category_input"]
+                file_category = self.ITEM_CATEGORY_LIST[values["file_category_input"]]
                 file_key = self.get_uuid()
                 file_data = {
                     "key": file_key,
@@ -481,6 +521,15 @@ class shortcut_keeper():
             elif event == "set_app_title":
                 title = values["new_window_title"]
                 self.update_app_title(title)
+                window.close()
+                window = sg.Window(self.get_app_title(),
+                                   self.tab_group(), icon=self.app_icon)
+            
+            elif event == "file_list_by_category_view":
+                self.FILTER = values[event]
+                print(event)
+                
+                # BUG: UserWarning: *** YOU ARE ATTEMPTING TO RESUSE AN ELEMENT IN YOUR LAYOUT! Once placed in a layout, an element cannot be used in another layout. ***
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
