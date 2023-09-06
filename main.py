@@ -32,9 +32,9 @@ class shortcut_keeper():
         self.app_theme = self._settings["app_settings"]["app_theme"]
         sg.theme(self.app_theme)
         self.app_icon = "./edit.ico"
-        self.window_size = (300, 220)
-        self.section_title_font = ("Arcadeclassic", 17)
-        self.section_normal_font = ("MS Sans Serif", 10)
+        self.window_size = (320, 220)
+        self.section_title_font = ("MS sans serif", 17, "bold")
+        self.section_normal_font = ("MS sans serif", 11)
         self.window = sg.Window(
                                 self.get_app_title(),
                                 self.tab_group(), 
@@ -55,21 +55,19 @@ class shortcut_keeper():
         list_of_registered_items = []
         for i, path in enumerate(registered_items):
             list_of_registered_items.append([
-                sg.Button("❌", key=f"{i}_delete_button"),
+                sg.Button("❎", key=f"{i}_delete_button"),
                 sg.Button("↗️", key=f"{i}_open_button"),
                 sg.Text(os.path.basename(path),
                         key=f"{i}_path_button", tooltip=path)
             ])
 
         empty_message = [
-            [sg.Text("=====================", font=self.section_normal_font)],
-            [sg.Text("WOW Such Empty!", font=self.section_normal_font)],
-            [sg.Text("=====================", font=self.section_normal_font)]
+            [sg.Text("WOW Such Empty!", font=self.section_title_font, text_color="lightgray")]
         ]
 
-        list_out = [
+        final_list = [
             sg.Column(
-                empty_message if list_of_registered_items == 0 else list_of_registered_items,
+                empty_message if len(list_of_registered_items) == 0 else list_of_registered_items,
                 scrollable=True,
                 vertical_scroll_only=True,
                 size=self.get_window_size()
@@ -78,7 +76,7 @@ class shortcut_keeper():
 
         layout = [
             [sg.HorizontalSeparator()],
-            list_out
+            final_list
         ]
         return layout
 
@@ -89,20 +87,16 @@ class shortcut_keeper():
             layout (list): pysimplegui layout list
         """
         settings = self.get_settings(self.setting_file)
-        key_list = list(settings["fileList"].keys())
+        key_list = list(settings["fileList"])
         print(key_list)
         layout = [
-            [sg.Text("📒 Register  an  Item", font=self.section_title_font)],
+            [sg.Text("📋 Register  an  Item", font=self.section_title_font)],
             [sg.HorizontalSeparator()],
-            [sg.Text("File/Folder Path: ")],
+            [sg.Text("File/Folder Path: ", font=self.section_normal_font)],
             [
                 sg.InputText(key="path_input", size=(30, 200)),
                 sg.FileBrowse(file_types=(("All files", "*.*"),))
             ],
-            # [
-                # sg.DropDown(key_list, default_value=key_list[0], key="category_input"),
-            #     sg.Button("Add") 
-            # ],
             [
                 sg.Button("Submit", key="submit_button")
             ]
@@ -149,7 +143,7 @@ class shortcut_keeper():
         inp_size = (20, 200)
 
         layout = [
-            [sg.Text("⚙️ Settings", font=self.section_title_font)],
+            [sg.Text("🔄 Settings", font=self.section_title_font)],
             [sg.HorizontalSeparator()],
             [
                 sg.Text(
@@ -247,7 +241,7 @@ class shortcut_keeper():
                         "app_id": self.app_id,
                         "app_theme": self.app_theme
                     },
-                    "fileList": {}
+                    "fileList": []
                 } 
         except:
             return {
@@ -255,7 +249,7 @@ class shortcut_keeper():
                         "app_id": "Shortcut Keeper",
                         "app_theme": "Reddit"
                     },
-                    "fileList": {}
+                    "fileList": []
                 }
     
     def get_window_size(self) -> tuple:
@@ -267,7 +261,7 @@ class shortcut_keeper():
         return self.window_size
     
     # ================================================
-    #                  SHORTCUT CRUD
+    #                 SHORTCUTS CRUD
     # ================================================
     
     def get_registered_items(self) -> list:
@@ -286,6 +280,7 @@ class shortcut_keeper():
             path (str): path to file
         """
         registered_items = self.get_registered_items()
+        print(registered_items)
         registered_items.append(path)
             
         self.modify_settings("fileList", registered_items)
@@ -356,7 +351,6 @@ class shortcut_keeper():
         window = self.window
 
         while True:
-            print("APP THEME =====", self.app_theme)
             # read events and their values
             event, values = window.read()
             # set theme
