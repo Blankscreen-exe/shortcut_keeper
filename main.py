@@ -37,6 +37,8 @@ class shortcut_keeper():
         self.window_size = (320, 220)
         self.section_title_font = ("MS sans serif", 17, "bold")
         self.section_normal_font = ("MS sans serif", 11)
+        self.section_hint_font = ("MS sans serif", 10, "bold")
+        self.section_hint_font_color = "gray"
         self.window = sg.Window(
                                 self.get_app_title(),
                                 self.tab_group(), 
@@ -57,8 +59,8 @@ class shortcut_keeper():
         list_of_registered_items = []
         for i, file_data in enumerate(registered_items):
             list_of_registered_items.append([
-                sg.Button("❎", key=f"{i}_delete_button"),
-                sg.Button("↗️", key=f"{i}_open_button"),
+                sg.Button("❎", key=f"{i}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
+                sg.Button("↗️", key=f"{i}_open_button", tooltip=f" Open {file_data['name']} "),
                 sg.Text(os.path.basename(file_data['name']),
                         key=f"{i}_path_button", tooltip=file_data['path'])
             ])
@@ -93,12 +95,25 @@ class shortcut_keeper():
         layout = [
             [sg.Text("📋 Register  an  Item", font=self.section_title_font)],
             [sg.HorizontalSeparator()],
-            [sg.Text("File/Folder Path: ", font=self.section_normal_font)],
+            [
+                sg.Text("File/Folder Path:", font=self.section_normal_font),
+                sg.Text("(?)", font=self.section_hint_font, text_color=self.section_hint_font_color, tooltip=" Path of the file ")
+            ],
             [
                 sg.InputText(key="path_input", size=(30, 200)),
                 sg.FileBrowse(file_types=(("All files", "*.*"),))
             ],
-            [sg.Text("File Name: ", font=self.section_normal_font)],
+            [
+                sg.Text("File Name:", font=self.section_normal_font),
+                sg.Text("(?)", font=self.section_hint_font, text_color=self.section_hint_font_color, tooltip=" Name to be displayed ")
+            ],
+            [
+                sg.InputText(key="file_name_input", size=(30, 200)),
+            ],
+            [
+                sg.Text("File Category:", font=self.section_normal_font),
+                sg.Text("(?)", font=self.section_hint_font, text_color=self.section_hint_font_color, tooltip=" Choose a file category ")
+            ],
             [
                 sg.InputText(key="file_name_input", size=(30, 200)),
             ],
@@ -135,7 +150,7 @@ class shortcut_keeper():
             [sg.Text("For more information, please visit:",
                      font=self.section_normal_font)],
             [sg.Text("🔗 https://github.com/Blankscreen-exe", enable_events=True, font=("Consolas", 12),
-                     text_color='#0F3FD8', background_color='#B2C00D', key="-ABOUT-LINK-")]
+                     text_color='#0F3FD8', background_color='lightyellow', key="-ABOUT-LINK-", tooltip="Go to Github Repository")]
         ]
         return layout
 
@@ -154,7 +169,13 @@ class shortcut_keeper():
                 sg.Text(
                     "App ID: ",
                     font=self.section_normal_font,
-                    tooltip="This is also your window title"
+                ),
+                sg.Text(
+                    "(?)",
+                    font=self.section_hint_font,
+                    text_color=self.section_hint_font_color,
+                    tooltip=""" For future use, but this acts only 
+ as your window title for now """
                 ),
                 sg.InputText(
                     default_text=self.get_app_title(),
@@ -168,6 +189,12 @@ class shortcut_keeper():
             ],
             [
                 sg.Text("Theme: ", font=self.section_normal_font),
+                sg.Text(
+                    "(?)",
+                    font=self.section_hint_font,
+                    text_color=self.section_hint_font_color,
+                    tooltip=" Select a Theme "
+                ),
                 sg.DropDown(
                     default_value=self.get_app_theme(),
                     values=self.get_app_theme_list(),
