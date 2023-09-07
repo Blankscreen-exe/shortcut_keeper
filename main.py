@@ -58,6 +58,10 @@ class shortcut_keeper():
         "set_app_id": "-SET_TITLE-",
         "go_to_repo": "-GOTO_REPO-",
         "go_to_blog": "-GOTO_BLOG-",
+        "add_category_popup": "-ADD_CATEGORY_POPUP-",
+        "delete_category_popup": "-DELETE_CATEGORY_POPUP-",
+        "add_category": "-ADD_CATEGORY-",
+        "delete_category": "-DELETE_CATEGORY-",
     }
     
     # ================================================
@@ -79,6 +83,9 @@ class shortcut_keeper():
         self.section_normal_font = ("MS sans serif", 11)
         self.section_hint_font = ("MS sans serif", 10, "bold")
         self.section_hint_font_color = "gray"
+        
+        # item categories
+        self.item_categories = self.set_item_categories() #self.get_settings(self.setting_file)['itemCategories']
         
         self.window = sg.Window(
                                 self.get_app_title(),
@@ -127,7 +134,7 @@ class shortcut_keeper():
                     ]
                     list_of_registered_items.append(item())
                 
-                elif file_data['category'] == self.ITEM_CATEGORY_LIST[self.FILTER]:
+                elif file_data['category'] == self.item_categories[self.FILTER]:
                     # item to be added to the list
                     item = lambda : [
                         sg.Button(
@@ -169,7 +176,7 @@ class shortcut_keeper():
                 sg.Text("Filter: ", font=self.section_normal_font),
                 sg.DropDown(
                     default_value=self.FILTER,
-                    values=["All"]+list(self.ITEM_CATEGORY_LIST.keys()),
+                    values=["All"]+list(self.item_categories.keys()),
                     key=self.EVENTS["apply_filter"],
                     size=(35, 220),
                     enable_events=True
@@ -212,11 +219,11 @@ class shortcut_keeper():
             ],
             [
                 sg.DropDown(
-                    default_value=list(self.ITEM_CATEGORY_LIST.keys())[0],
-                    values=list(self.ITEM_CATEGORY_LIST.keys()),
+                    default_value=list(self.item_categories.keys())[0],
+                    values=list(self.item_categories.keys()),
                     key="file_category_input",
                     size=(30, 200),
-                ),
+                )
             ],
             [
                 sg.Button(
@@ -316,6 +323,26 @@ class shortcut_keeper():
                     button_text="  Set  ",
                     key=self.EVENTS['set_app_theme']
                 )
+            ],
+            [
+                sg.Text(
+                    "Category: ", 
+                    font=self.section_normal_font
+                    ),
+                sg.Text(
+                    "(?)",
+                    font=self.section_hint_font,
+                    text_color=self.section_hint_font_color,
+                    tooltip=" Add/Delete file categories "
+                ),
+                sg.Button(
+                    "➕", 
+                    key=self.EVENTS['add_category_popup']
+                    ),
+                sg.Button(
+                    "➖", 
+                    key=self.EVENTS['delete_category_popup']
+                    ),
             ]
         ]
         return layout
@@ -335,6 +362,27 @@ class shortcut_keeper():
             ], key="-TAB_GROUP-")
         ]]
         return tab_group
+
+    def get_add_category_layout(self):
+        return  [
+            [sg.Text('Add Your custom file category here:', font=self.section_normal_font)],
+            [sg.InputText(key="category", size=(30, 200))],
+            [sg.Button('Add', key=self.EVENTS['add_category'])]
+        ]
+        
+    def get_delete_category_layout(self):
+        return  [
+            [sg.Text('Select a file category to delete:', font=self.section_normal_font)],
+            [
+                sg.DropDown(
+                    default_value=list(self.item_categories.keys())[0],
+                    values=list(self.item_categories.keys()),
+                    key="file_category_input",
+                    size=(30, 200),
+                )
+            ],
+            [sg.Button('Delete', key=self.EVENTS['delete_category'])]
+        ]
 
     # ================================================
     #                  SETTINGS CRUD
@@ -378,21 +426,20 @@ class shortcut_keeper():
             dict: default settings template
         """
         try:
-            return {
-                    "app_settings":{
-                        "app_id": self.app_id,
-                        "app_theme": self.app_theme
-                    },
-                    "fileList": []
-                } 
+            app_id = self.app_id
+            app_theme = self.app_theme
         except:
-            return {
-                    "app_settings":{
-                        "app_id": "Shortcut Keeper",
-                        "app_theme": "Reddit"
-                    },
-                    "fileList": []
-                }
+            app_id = "Shortcut Keeper"
+            app_theme = "Reddit"
+            
+        return {
+                "app_settings":{
+                    "app_id": app_id,
+                    "app_theme": app_theme
+                },
+                "itemCategories": self.ITEM_CATEGORY_LIST,
+                "fileList": []
+            }
     
     def get_window_size(self) -> tuple:
         """getter method for window_size
@@ -402,6 +449,19 @@ class shortcut_keeper():
         """
         return self.window_size
     
+    def set_item_categories(self):
+        self.item_categories = self.get_settings(self.setting_file)['itemCategories']
+        return self.item_categories
+        
+    def delete_item_category(self, name):
+        self.item_categories = self.get_settings(self.setting_file)['itemCategories']
+        
+        try:
+            del self.item_categories[name]
+            self.modify_settings("itemCategories", self.item_categories)
+        except:
+            pass
+
     # ================================================
     #                 SHORTCUTS CRUD
     # ================================================
@@ -502,6 +562,8 @@ class shortcut_keeper():
         for index, item in enumerate(item_list):
             if item['key']==key:
                 return index
+    def slugify_name(self, name):
+        return name.replace(" ", "_").lower()
     
     # ================================================
     #                APP MAIN METHOD
@@ -528,7 +590,7 @@ class shortcut_keeper():
             if event == self.EVENTS['register_item']:
                 file_path = values["path_input"]
                 file_name = values["file_name_input"]
-                file_category = self.ITEM_CATEGORY_LIST[values["file_category_input"]]
+                file_category = self.item_categories[values["file_category_input"]]
                 file_key = self.get_uuid()
                 file_type = self.get_file_extension(file_path)
                 
@@ -586,6 +648,46 @@ class shortcut_keeper():
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
+                
+            # EVENT: add file category
+            elif event == self.EVENTS['add_category_popup']:
+                popup_window = sg.Window('Add Category', self.get_add_category_layout())
+                while True:
+                    event_popup, value = popup_window.read()
+                    if event_popup in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
+                        popup_window.close()
+                        break
+                        
+                    elif event_popup == self.EVENTS['add_category']:
+                        self.modify_settings(f"itemCategories.{value['category']}", self.slugify_name(value['category']))
+                        self.set_item_categories()
+                        popup_window.close()
+                        break
+                        
+                window.close()
+                window = sg.Window(self.get_app_title(),
+                                   self.tab_group(), icon=self.app_icon)
+                
+            # EVENT: delete file category
+            elif event == self.EVENTS['delete_category_popup']:
+                popup_window = sg.Window('Delete Category', self.get_delete_category_layout())
+                while True:
+                    event_popup, value = popup_window.read()
+                    if event_popup in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
+                        popup_window.close()
+                        break
+                        
+                    elif event_popup == self.EVENTS['delete_category']:
+                        self.delete_item_category(value['file_category_input'])
+                        self.modify_settings(f"itemCategories", self.item_categories)
+                        self.set_item_categories()
+                        popup_window.close()
+                        break
+                        
+                window.close()
+                window = sg.Window(self.get_app_title(),
+                                   self.tab_group(), icon=self.app_icon)
+                
             
 
         window.close()
