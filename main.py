@@ -41,6 +41,7 @@ class shortcut_keeper():
             "Other":"other", 
         }
     
+    # default filter applied
     FILTER = "All"
         
     # ================================================
@@ -48,7 +49,16 @@ class shortcut_keeper():
     # ================================================
     
     # TODO: add event constants 
-    EVENTS = {}
+    EVENTS = {
+        "register_item": "-REGISTER_ITEM-",
+        "delete_item": "_delete_item",
+        "open_item": "_open_item",
+        "apply_filter": "-FILTER-",
+        "set_app_theme": "-SET_THEME-",
+        "set_app_id": "-SET_TITLE-",
+        "go_to_repo": "-GOTO_REPO-",
+        "go_to_blog": "-GOTO_BLOG-",
+    }
     
     # ================================================
     #                    CONSTRUCTOR
@@ -98,8 +108,16 @@ class shortcut_keeper():
                 if self.FILTER=="All":
                     # item to be added to the list
                     item = lambda : [
-                        sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
-                        sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
+                        sg.Button(
+                            "❎", 
+                            key=file_data['key'] + self.EVENTS['delete_item'], 
+                            tooltip=f" Delete {file_data['name']} from registry "
+                            ),
+                        sg.Button(
+                            "↗️", 
+                            key=file_data['key'] + self.EVENTS['open_item'], 
+                            tooltip=f" Open {file_data['name']} "
+                            ),
                         sg.Text(
                             os.path.basename(f"({file_data['type']}) {file_data['name']}"),
                             font=self.section_normal_font,
@@ -112,8 +130,16 @@ class shortcut_keeper():
                 elif file_data['category'] == self.ITEM_CATEGORY_LIST[self.FILTER]:
                     # item to be added to the list
                     item = lambda : [
-                        sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
-                        sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
+                        sg.Button(
+                            "❎", 
+                            key=file_data['key'] + self.EVENTS['delete_item'], 
+                            tooltip=f" Delete {file_data['name']} from registry "
+                            ),
+                        sg.Button(
+                            "↗️", 
+                            key=file_data['key'] + self.EVENTS['open_item'], 
+                            tooltip=f" Open {file_data['name']} "
+                            ),
                         sg.Text(
                             os.path.basename(f"({file_data['type']}) {file_data['name']}"),
                             font=self.section_normal_font, 
@@ -144,7 +170,7 @@ class shortcut_keeper():
                 sg.DropDown(
                     default_value=self.FILTER,
                     values=["All"]+list(self.ITEM_CATEGORY_LIST.keys()),
-                    key="file_list_by_category_view",
+                    key=self.EVENTS["apply_filter"],
                     size=(35, 220),
                     enable_events=True
                 ),
@@ -193,7 +219,10 @@ class shortcut_keeper():
                 ),
             ],
             [
-                sg.Button("Submit", key="submit_button")
+                sg.Button(
+                    "Submit", 
+                    key=self.EVENTS['register_item']
+                    )
             ]
         ]
         return layout
@@ -224,8 +253,14 @@ class shortcut_keeper():
                      font=self.section_normal_font)],
             [sg.Text("For more information, please visit:",
                      font=self.section_normal_font)],
-            [sg.Text("🔗 https://github.com/Blankscreen-exe", enable_events=True, font=("Consolas", 12),
-                     text_color='#0F3FD8', background_color='lightyellow', key="-ABOUT-LINK-", tooltip="Go to Github Repository")]
+            [sg.Text("🔗 https://github.com/Blankscreen-exe", 
+                     enable_events=True, 
+                     font=("Consolas", 12),
+                     text_color='#0F3FD8', 
+                     background_color='lightyellow', 
+                     key=self.EVENTS['go_to_repo'], 
+                     tooltip="Go to Github Repository"
+                     )]
         ]
         return layout
 
@@ -259,7 +294,7 @@ class shortcut_keeper():
                 ),
                 sg.Button(
                     button_text="  Set  ",
-                    key="set_app_title"
+                    key=self.EVENTS['set_app_id']
                 ),
             ],
             [
@@ -279,7 +314,7 @@ class shortcut_keeper():
                 ),
                 sg.Button(
                     button_text="  Set  ",
-                    key="set_theme"
+                    key=self.EVENTS['set_app_theme']
                 )
             ]
         ]
@@ -462,6 +497,12 @@ class shortcut_keeper():
         extension = os.path.splitext(file_name)[1]
         return  extension if len(extension)!=0 else "?"
     
+    def find_item_index(self, key):
+        item_list = self.get_registered_items()
+        for index, item in enumerate(item_list):
+            if item['key']==key:
+                return index
+    
     # ================================================
     #                APP MAIN METHOD
     # ================================================
@@ -475,14 +516,16 @@ class shortcut_keeper():
         while True:
             # read events and their values
             event, values = window.read()
+            
             # set theme
             sg.theme(self.app_theme)
             
+            # Close Event
             if event in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
                 break
 
-            # shortcut events
-            if event == "submit_button":
+            # EVENT: Register a new item
+            if event == self.EVENTS['register_item']:
                 file_path = values["path_input"]
                 file_name = values["file_name_input"]
                 file_category = self.ITEM_CATEGORY_LIST[values["file_category_input"]]
@@ -498,27 +541,37 @@ class shortcut_keeper():
                 }
                 self.add_item(file_data)
                 window.close()
+                # TODO: select Tab 2 on refresh
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
-                # window.Element('-TAB_GROUP-').SelectTab(2)
 
-            elif event.endswith("_delete_button"):
-                key = (event.split("_")[0])
+            # EVENT: Delete an item
+            elif event.endswith(self.EVENTS['delete_item']):
+                key = event.split("_")[0]
                 self.delete_item(key)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
 
-            elif event.endswith("_open_button"):
-                index = int(event.split("_")[0])
+            # EVENT: execute an item 
+            elif event.endswith(self.EVENTS['open_item']):
+                key = event.split("_")[0]
+                index = self.find_item_index(key)
                 os.startfile(self.get_registered_items()[index]['path'])
+                
+            # EVENT: apply filter to list of items
+            elif event == self.EVENTS['apply_filter']:
+                self.FILTER = values[event]
+                window.close()
+                window = sg.Window(self.get_app_title(),
+                                   self.tab_group(), icon=self.app_icon)
 
-            # hyperlink events
-            elif event == "-ABOUT-LINK-":
+            # EVENT: visit the repository link
+            elif event == self.EVENTS['go_to_repo']:
                 os.startfile("https://github.com/Blankscreen-exe/shortcut_keeper")
 
-            # settings events
-            elif event == "set_theme":
+            # EVENT: set app theme
+            elif event == self.EVENTS['set_app_theme']:
                 theme = values["theme_dropdown"]
                 self.update_app_theme(theme)
                 window.close()
@@ -526,18 +579,14 @@ class shortcut_keeper():
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
 
-            elif event == "set_app_title":
+            # EVENT: set app title/id
+            elif event == self.EVENTS['set_app_id']:
                 title = values["new_window_title"]
                 self.update_app_title(title)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
             
-            elif event == "file_list_by_category_view":
-                self.FILTER = values[event]
-                window.close()
-                window = sg.Window(self.get_app_title(),
-                                   self.tab_group(), icon=self.app_icon)
 
         window.close()
 
