@@ -101,17 +101,10 @@ class shortcut_keeper():
                         sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
                         sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
                         sg.Text(
-                            os.path.basename(file_data['type'] + file_data['name']),
+                            os.path.basename(f"({file_data['type']}) {file_data['name']}"),
                             font=self.section_normal_font,
                             key=f"{file_data['key']}_path_button", 
-                            tooltip=file_data['path']
-                            ),
-                        sg.Text(
-                            # TODO: change this to ?
-                            os.path.basename(file_data['category']),
-                            font=self.section_normal_font,
-                            text_color="red",
-                            tooltip=file_data['category']
+                            tooltip=f" ({file_data['category']}) {file_data['path']} "
                             )
                     ]
                     list_of_registered_items.append(item())
@@ -122,18 +115,10 @@ class shortcut_keeper():
                         sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
                         sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
                         sg.Text(
-                            os.path.basename(file_data['type'] + file_data['name']),
+                            os.path.basename(f"({file_data['type']}) {file_data['name']}"),
                             font=self.section_normal_font, 
-                            tooltip=file_data['path']
-                            ),
-                        sg.Text(
-                            # TODO: change this to ?
-                            os.path.basename(file_data['category']),
-                            font=self.section_normal_font,
-                            text_color="red",
-                            tooltip=file_data['category']
+                            tooltip=f" ({file_data['category']}) {file_data['path']} "
                             )
-                    
                     ]
                     list_of_registered_items.append(item())
                 
@@ -474,7 +459,8 @@ class shortcut_keeper():
         return str(uuid.uuid1())
     
     def get_file_extension(self, file_name):
-        return os.path.splitext(file_name)[1]
+        extension = os.path.splitext(file_name)[1]
+        return  extension if len(extension)!=0 else "?"
     
     # ================================================
     #                APP MAIN METHOD
@@ -501,13 +487,13 @@ class shortcut_keeper():
                 file_name = values["file_name_input"]
                 file_category = self.ITEM_CATEGORY_LIST[values["file_category_input"]]
                 file_key = self.get_uuid()
-                file_mime_type, encoding = mimetypes.guess_type(file_path)
+                file_type = self.get_file_extension(file_path)
                 
                 file_data = {
                     "key": file_key,
                     "name": file_name,
                     "path": file_path,
-                    "type": file_mime_type,
+                    "type": file_type,
                     "category": file_category
                 }
                 self.add_item(file_data)
