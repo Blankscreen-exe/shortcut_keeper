@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import os
 import json
 import uuid
-
+import mimetypes
 # for debug purposes
 from pprint import pprint as pp
 
@@ -90,40 +90,55 @@ class shortcut_keeper():
         
         registered_items = self.get_registered_items()
         
-        print("======== FILTER=======")
-        print(self.FILTER)
-        
         list_of_registered_items = []
         
         for i, file_data in enumerate(registered_items):
-            if self.FILTER=="All":
-                # item to be added to the list
-                item = [
-                    sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
-                    sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
-                    sg.Text(os.path.basename(file_data['name']),
-                            key=f"{file_data['key']}_path_button", tooltip=file_data['path'])
-                ]
             
-            elif file_data['category'] == self.ITEM_CATEGORY_LIST[self.FILTER]:
-                # item to be added to the list
-                item = [
-                    sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
-                    sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
-                    sg.Text(
-                        os.path.basename(file_data['name']),
-                        font=self.section_normal_font, 
-                        tooltip=file_data['path']
-                        )
-                ]
-                
             try:
-                list_of_registered_items.append(item)
+                if self.FILTER=="All":
+                    # item to be added to the list
+                    item = lambda : [
+                        sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
+                        sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
+                        sg.Text(
+                            os.path.basename(file_data['type'] + file_data['name']),
+                            font=self.section_normal_font,
+                            key=f"{file_data['key']}_path_button", 
+                            tooltip=file_data['path']
+                            ),
+                        sg.Text(
+                            # TODO: change this to ?
+                            os.path.basename(file_data['category']),
+                            font=self.section_normal_font,
+                            text_color="red",
+                            tooltip=file_data['category']
+                            )
+                    ]
+                    list_of_registered_items.append(item())
+                
+                elif file_data['category'] == self.ITEM_CATEGORY_LIST[self.FILTER]:
+                    # item to be added to the list
+                    item = lambda : [
+                        sg.Button("❎", key=f"{file_data['key']}_delete_button", tooltip=f" Delete {file_data['name']} from registry "),
+                        sg.Button("↗️", key=f"{file_data['key']}_open_button", tooltip=f" Open {file_data['name']} "),
+                        sg.Text(
+                            os.path.basename(file_data['type'] + file_data['name']),
+                            font=self.section_normal_font, 
+                            tooltip=file_data['path']
+                            ),
+                        sg.Text(
+                            # TODO: change this to ?
+                            os.path.basename(file_data['category']),
+                            font=self.section_normal_font,
+                            text_color="red",
+                            tooltip=file_data['category']
+                            )
+                    
+                    ]
+                    list_of_registered_items.append(item())
+                
             except:
                 pass
-
-        print("======== UPDATEDLIST=======")
-        print(len(list_of_registered_items))
 
         empty_message = [
             [sg.Text("WOW Such Empty!", font=self.section_title_font, text_color="lightgray")]
@@ -297,7 +312,7 @@ class shortcut_keeper():
                 [sg.Tab('Register Shortcuts', self.get_add_item_layout())],
                 [sg.Tab("Settings", self.get_settings_layout())],
                 [sg.Tab('About', self.get_about_section_layout())]
-            ])
+            ], key="-TAB_GROUP-")
         ]]
         return tab_group
 
@@ -458,6 +473,9 @@ class shortcut_keeper():
         # make a UUID based on the host address and current time
         return str(uuid.uuid1())
     
+    def get_file_extension(self, file_name):
+        return os.path.splitext(file_name)[1]
+    
     # ================================================
     #                APP MAIN METHOD
     # ================================================
@@ -483,16 +501,20 @@ class shortcut_keeper():
                 file_name = values["file_name_input"]
                 file_category = self.ITEM_CATEGORY_LIST[values["file_category_input"]]
                 file_key = self.get_uuid()
+                file_mime_type, encoding = mimetypes.guess_type(file_path)
+                
                 file_data = {
                     "key": file_key,
                     "name": file_name,
                     "path": file_path,
+                    "type": file_mime_type,
                     "category": file_category
                 }
                 self.add_item(file_data)
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
+                # window.Element('-TAB_GROUP-').SelectTab(2)
 
             elif event.endswith("_delete_button"):
                 key = (event.split("_")[0])
@@ -527,9 +549,6 @@ class shortcut_keeper():
             
             elif event == "file_list_by_category_view":
                 self.FILTER = values[event]
-                print(event)
-                
-                # BUG: UserWarning: *** YOU ARE ATTEMPTING TO RESUSE AN ELEMENT IN YOUR LAYOUT! Once placed in a layout, an element cannot be used in another layout. ***
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
