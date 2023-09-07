@@ -53,6 +53,7 @@ class shortcut_keeper():
         "register_item": "-REGISTER_ITEM-",
         "delete_item": "_delete_item",
         "open_item": "_open_item",
+        "update_item": "_update_item",
         "apply_filter": "-FILTER-",
         "set_app_theme": "-SET_THEME-",
         "set_app_id": "-SET_TITLE-",
@@ -62,6 +63,7 @@ class shortcut_keeper():
         "delete_category_popup": "-DELETE_CATEGORY_POPUP-",
         "add_category": "-ADD_CATEGORY-",
         "delete_category": "-DELETE_CATEGORY-",
+        "update_file_info": "-UPDATE_FILE-"
     }
     
     # ================================================
@@ -125,6 +127,11 @@ class shortcut_keeper():
                             key=file_data['key'] + self.EVENTS['open_item'], 
                             tooltip=f" Open {file_data['name']} "
                             ),
+                        sg.Button(
+                            "♻️", 
+                            key=file_data['key'] + self.EVENTS['update_item'], 
+                            tooltip=f" Update {file_data['name']} "
+                            ),
                         sg.Text(
                             os.path.basename(f"({file_data['type']}) {file_data['name']}"),
                             font=self.section_normal_font,
@@ -146,6 +153,11 @@ class shortcut_keeper():
                             "↗️", 
                             key=file_data['key'] + self.EVENTS['open_item'], 
                             tooltip=f" Open {file_data['name']} "
+                            ),
+                        sg.Button(
+                            "♻️", 
+                            key=file_data['key'] + self.EVENTS['update_item'], 
+                            tooltip=f" Update {file_data['name']} "
                             ),
                         sg.Text(
                             os.path.basename(f"({file_data['type']}) {file_data['name']}"),
@@ -284,7 +296,7 @@ class shortcut_keeper():
             [sg.HorizontalSeparator()],
             [
                 sg.Text(
-                    "App ID: ",
+                    "App ID:     ",
                     font=self.section_normal_font,
                 ),
                 sg.Text(
@@ -305,7 +317,7 @@ class shortcut_keeper():
                 ),
             ],
             [
-                sg.Text("Theme: ", font=self.section_normal_font),
+                sg.Text("Theme:     ", font=self.section_normal_font),
                 sg.Text(
                     "(?)",
                     font=self.section_hint_font,
@@ -383,6 +395,39 @@ class shortcut_keeper():
             ],
             [sg.Button('Delete', key=self.EVENTS['delete_category'])]
         ]
+    
+    def get_update_file_info_layout(self, file_obj):
+        
+        return  [
+            [
+                sg.Text(f"Update {file_obj['name']}", font=self.section_title_font)
+            ],
+            [sg.HorizontalSeparator()],
+            [
+                sg.Text('Name:     ', font=self.section_normal_font),
+                sg.InputText(file_obj['name'], key="updated_file_name", size=(32, 200))
+            ],
+            [
+                sg.Text('Path:         ', font=self.section_normal_font),
+                sg.InputText(file_obj['path'], key="updated_file_path", size=(23, 150)),
+                sg.FileBrowse("Browse" ,file_types=(("All files", "*.*"),))
+            ],
+            [
+                sg.Text('Category:', font=self.section_normal_font),
+                sg.DropDown(
+                    default_value=file_obj['category'],
+                    values=list(self.item_categories.keys()),
+                    key="updated_file_category",
+                    size=(30, 200),
+                )
+            ],
+            [
+                sg.Button('Update', key=self.EVENTS['update_file_info'])
+            ]
+        ]
+            
+        
+        
 
     # ================================================
     #                  SETTINGS CRUD
@@ -498,7 +543,27 @@ class shortcut_keeper():
                 del registered_items[i]
                 break
         self.modify_settings("fileList", registered_items)
+        
+    def update_item(self, index, file_obj):
+        """updates file info in the config file
 
+        Args:
+            index (key): index of the path in the file
+            file_obj (dict): dictionary containing updated details
+        """
+        registered_items = self.get_registered_items()
+
+        file_item = registered_items[index]
+        for key in file_item.keys():
+            try:
+                file_item[key] = file_obj[key]
+            except:
+                pass
+            
+        registered_items[index] = file_item
+                
+        self.modify_settings("fileList", registered_items)
+        
     # ================================================
     #                APP THEME & TITLE
     # ================================================
@@ -562,6 +627,7 @@ class shortcut_keeper():
         for index, item in enumerate(item_list):
             if item['key']==key:
                 return index
+            
     def slugify_name(self, name):
         return name.replace(" ", "_").lower()
     
@@ -620,6 +686,37 @@ class shortcut_keeper():
                 key = event.split("_")[0]
                 index = self.find_item_index(key)
                 os.startfile(self.get_registered_items()[index]['path'])
+            
+            # EVENT: update an item 
+            elif event.endswith(self.EVENTS['update_item']):
+                key = event.split("_")[0]
+                index = self.find_item_index(key)
+                file_obj = self.get_settings(self.setting_file)['fileList'][index]
+                
+                popup_window = sg.Window(
+                    f"Update {file_obj['name']}", 
+                    self.get_update_file_info_layout(file_obj)
+                    )
+                while True:
+                    event_popup, value = popup_window.read()
+                    if event_popup in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
+                        popup_window.close()
+                        break
+                        
+                    elif event_popup == self.EVENTS['update_file_info']:
+                        file_obj = {
+                            "name": value['updated_file_name'],
+                            "path": value['updated_file_path'],
+                            "category": value['updated_file_category']
+                        }
+                        self.update_item(index, file_obj)
+                        popup_window.close()
+                        break
+                        
+                # FIXME: this refreshes even if there are no changes performed
+                window.close()
+                window = sg.Window(self.get_app_title(),
+                                   self.tab_group(), icon=self.app_icon)
                 
             # EVENT: apply filter to list of items
             elif event == self.EVENTS['apply_filter']:
@@ -664,6 +761,7 @@ class shortcut_keeper():
                         popup_window.close()
                         break
                         
+                # FIXME: this refreshes even if there are no changes performed
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
@@ -684,6 +782,7 @@ class shortcut_keeper():
                         popup_window.close()
                         break
                         
+                # FIXME: this refreshes even if there are no changes performed
                 window.close()
                 window = sg.Window(self.get_app_title(),
                                    self.tab_group(), icon=self.app_icon)
