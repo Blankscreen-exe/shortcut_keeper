@@ -26,6 +26,17 @@ class shortcut_keeper():
         The main window of the app.
     """
 
+    # =================== CONSTANTS ======================
+
+    THEMES = [
+        'LightGreen1',
+        'Reddit',
+        'DarkBlack',
+        'GreenMono',
+        'DefaultNoMoreNagging',
+        'GrayGrayGray'
+    ]
+    
     def __init__(self):
         self.setting_file = "sk_cfg.json"
         self._settings = self.get_settings(self.setting_file)
@@ -37,6 +48,12 @@ class shortcut_keeper():
         self.window_size = (300, 220)
         self.section_title_font = ("MS Sans Serif", 17, 'bold')
         self.section_normal_font = ("MS Sans Serif", 10)
+        self.section_mini_font = ("MS Sans Serif", 8)
+        self.font_colors = {
+            "primary": "black",
+            "secondary": "blue",
+            "tertiary": "gray"
+        }
         self.window = sg.Window(
                                 self.get_app_title(),
                                 self.tab_group(), 
@@ -85,7 +102,6 @@ class shortcut_keeper():
         ]
 
         final_layout = [
-            [sg.HorizontalSeparator()],
             list_to_output
         ]
         return final_layout
@@ -105,7 +121,8 @@ class shortcut_keeper():
                 sg.FileBrowse(file_types=(("All files", "*.*"),))
             ],
             [
-                sg.Button("Submit", key="submit_button")
+                sg.Button("Submit", key="submit_button"),
+                sg.Text("", font=self.section_mini_font, text_color=self.font_colors['tertiary'], key="-SUBMIT_SUCCESS-")
             ]
         ]
         return layout
@@ -190,11 +207,13 @@ class shortcut_keeper():
         """
         tab_group = [[
             sg.TabGroup([
-                [sg.Tab('List', self.get_registered_items_layout())],
-                [sg.Tab('Register Shortcuts', self.get_add_item_layout())],
-                [sg.Tab("Settings", self.get_settings_layout())],
-                [sg.Tab('About', self.get_about_layout())]
-            ])
+                [sg.Tab('List', self.get_registered_items_layout(), key="-TAB-LIST-")],
+                [sg.Tab('Register Shortcuts', self.get_add_item_layout(), key="-TAB-REGISTER-")],
+                [sg.Tab("Settings", self.get_settings_layout(), key="-TAB-SETTINGS-")],
+                [sg.Tab('About', self.get_about_layout(), key="-TAB-ABOUT-")]
+            ],
+            enable_events=True, 
+            key="-TABGROUP-")
         ]]
         return tab_group
 
@@ -285,7 +304,7 @@ class shortcut_keeper():
         Returns:
             list: list of themes for the app
         """
-        return sg.theme_list()
+        return self.THEMES
     
     def get_app_title(self) -> str:
         """getter method for app title
@@ -344,7 +363,63 @@ class shortcut_keeper():
         """
         data = self.get_settings(self.setting_file)
         return data["fileList"]
-       
+    
+    # =================== ACTIONS ======================
+    
+    def action_switch_tab(self, window, event, values):
+        # set submit success message to null
+        window["-SUBMIT_SUCCESS-"].update("")
+        
+    def action_register_item(self, window, event, values):
+        path = values["path_input"]
+        id = str(uuid.uuid1())
+        file_obj = {
+            'key': id,
+            'path': path 
+        }
+        self.add_registered_item(id, file_obj)
+        window["-SUBMIT_SUCCESS-"].update(f"✔️{os.path.basename(file_obj['path']).strip()} Added successfully!")
+        # set path input text to null
+        window["path_input"].update("")
+
+        window.extend_layout(window['-ITEM_LIST-'], [self.get_single_list_item(key=id, file_obj=file_obj)])
+        window.refresh()
+        window['-ITEM_LIST-'].contents_changed()
+        
+    def action_delete_item(self, window, event, values):
+        self.get_app_window().read()
+        
+        key = event.split("__")[0]
+        print(key)
+        file_obj = self.get_settings(self.setting_file)['fileList'][key]
+        pp(file_obj)
+        print("HERE" ,1)
+        self.delete_registered_item(key)
+        print("HERE" ,2)
+        # BOOKMARK:
+        # self.get_app_window().finalize()
+        # self.window['-ITEM_LIST-'].update([])
+        # self.window[key+"__path_button"].Widget.tkpack_forget()
+        # self.window[key+"__path_button"].destroy()
+        # self.get_app_window().read()
+        window["-ITEM_LIST-"].update("")
+        # window.finalize()
+        print("HERE" ,3)
+        
+        # window.extend_layout(window['-ITEM_LIST-'], self.items_list_generator())
+        print("HERE" ,4)
+        
+        # window.close()
+        # window = self.get_app_window()
+    
+    def action_open_item(self, window, event, values):
+        key = event.split("__")[0]
+        os.startfile(self.get_registered_item_list()[key]["path"])   
+    
+    def action_goto_repo_link(self, window, event, values):
+        os.startfile("https://github.com/Blankscreen-exe/shortcut_keeper")
+        
+    
     # =================== MAIN ======================
 
     def main(self) -> None:
@@ -357,70 +432,50 @@ class shortcut_keeper():
             # read events and their values
             event, values = window.read()
 
+            # MSG: enable for debugging
+            # pp(values)
+            
             # EVENT: close app
             if event in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
                 break
             
+            # EVENT: switch Tab
+            if values["-TABGROUP-"].startswith("-TAB-"):
+                self.action_switch_tab(window, event, values)
+            
             # EVENT: add item
             if event == "submit_button":
-                path = values["path_input"]
-                id = str(uuid.uuid1())
-                file_obj = {
-                    'key': id,
-                    'path': path 
-                }
-                self.add_registered_item(id, file_obj)
-                
-                
-                # self.window['-ITEM_LIST-'].update("")
-                window.extend_layout(window['-ITEM_LIST-'], [self.get_single_list_item(key=id, file_obj=file_obj)])
-                # window.close()
-                # window = self.get_app_window()
-                window.refresh()
-                window['-ITEM_LIST-'].contents_changed()
+                self.action_register_item(window, event, values)
 
             # EVENT: delete item
             elif event.endswith("__delete_button"):
-                index = event.split("__")[0]
-                print("HERE" ,1)
-                self.delete_registered_item(index)
-                print("HERE" ,2)
-                self.window['-ITEM_LIST-'].update(self.items_list_generator())
-                print("HERE" ,3)
-                
-                # window.extend_layout(window['-ITEM_LIST-'], self.items_list_generator())
-                print("HERE" ,4)
-                # window.close()
-                # window = self.get_app_window()
+                self.action_delete_item(window, event, values)
 
             # EVENT: open item
             elif event.endswith("__open_button"):
-                index = int(event.split("__")[0])
-                os.startfile(self.get_registered_item_list()[index])
+                self.action_open_item(window, event, values)
 
             # EVENT: Goto repo link
             elif event == "-ABOUT-LINK-":
-                os.startfile("https://github.com/Blankscreen-exe/shortcut_keeper")
+                self.action_goto_repo_link(window, event, values)
 
             # EVENT: set the theme of the app
             elif event == "set_theme":
-                theme = values["theme_dropdown"]
-                self.reset_app_theme(theme)
-                # window.close()
+                # FIXME: remove the function call. its muda muda
+                # self.action_set_app_theme(window, event, values)
+                self.reset_app_theme(values["theme_dropdown"])
+                window.close()
                 sg.theme(self.app_theme)
-                # REF: https://stackoverflow.com/questions/71461363/pysimplegui-refreshing-window
-                # pp(dir(window))
-                # window.Refresh()
-                window['-ITEM_LIST-'].update()
-                # window = self.get_app_window()
-
+                window = self.get_app_window()
+                
             # EVENT: set the title of the app
             elif event == "set_app_title":
+                # self.action_set_app_title(window, event, values)
                 title = values["new_window_title"]
                 self.reset_app_title(title)
                 window.close()
                 window = self.get_app_window()
-
+                
         window.close()
 
 
