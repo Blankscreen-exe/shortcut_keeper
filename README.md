@@ -1,4 +1,4 @@
-# Shortcut Keeper
+# Shortcut Keeper (v0.1)
 An icon grouper applet for windows, inspired by icon grouping feature in KDE plasma and android desktops.
 
 This is just like the icon grouping found in android and KDE plasma desktops.
@@ -52,8 +52,13 @@ python -m pysimplegui-exemaker.pysimplegui-exemaker
 - Change Color Theme
 - Change App name
 
-## Further Development
+## Further Development (v0.2)
 
-- [ ] enable multiple instances in the same directory
-- [ ] enable sharing of configuration file
-- [ ] enable name spacing shortcuts during registration
+- [ ] collect more file info
+- [ ] enable file categories and filter display
+- [ ] enable adding more categories
+- [ ] enable deleting categories
+- [ ] desktop tray icon
+- [ ] enable naming added files
+- [ ] enable updating file details
+- [ ] enable custom themes
