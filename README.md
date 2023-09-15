@@ -49,6 +49,7 @@ python -m pysimplegui-exemaker.pysimplegui-exemaker
 ## Features
 
 - Create or delete shortcuts
+- Open files
 - Change Color Theme
 - Change App name
 
@@ -62,3 +63,4 @@ python -m pysimplegui-exemaker.pysimplegui-exemaker
 - [ ] enable naming added files
 - [ ] enable updating file details
 - [ ] enable custom themes
+- [ ] set config file location
