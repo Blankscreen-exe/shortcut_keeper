@@ -1,3 +1,25 @@
+"""
+Module Name: shortcut_keeper
+Version: 0.1
+
+This script contains code for a desktoip applet which helps in keeping symbolic links in one place. This applet is built with PySimpleGui which is a Python based desktop application framework built on Tkinter.
+
+Author: Muhammad Hammad Hassan
+Date: April 2023
+
+Classes:
+    shortcut_keeper: Initializes the PySimpleGui Applet with all of its other functionalities.
+
+Usage Example:
+    # Example code demonstrating how to use this module/package.
+
+    App = shortcut_keeper()
+    App.main()
+
+Notes:
+    This is a compact software which only consists of a single class. It is currently v0.1. In case this software is developed further, I might add some more dependent files.
+"""
+
 import PySimpleGUI as sg
 import os
 import json
@@ -7,23 +29,6 @@ from pprint import pprint as pp
 class shortcut_keeper():
     """
     This class represents an app that allows users to register and view quick launch shortcuts.
-    
-    Attributes:
-    -----------
-    app_theme: str
-        The default theme of the app.
-    window_size: tuple
-        The default size of the app window.
-    section_title_font: tuple
-        The default font of section titles.
-    section_normal_font: tuple
-        The default font of normal text.
-    app_icon: str
-        The file path to the app icon.
-    app_id: str
-        The unique ID of the app (also the title of the app).
-    window: PySimpleGUI.Window
-        The main window of the app.
     """
 
     # =================== CONSTANTS ======================
@@ -62,16 +67,26 @@ class shortcut_keeper():
 
     # =================== LAYOUTS ======================
 
-    def get_single_list_item(self, key, file_obj):
-        output = [
+    def get_single_list_item(self, key, file_obj) -> list:
+        """generates layout for a single List item
+
+        Returns:
+            single_list_item (list): pysimplegui layout list
+        """
+        single_list_item = [
                 sg.Button("❌", key=f"{key}__delete_button"),
                 sg.Button("↗️", key=f"{key}__open_button"),
                 sg.Text(os.path.basename(file_obj['path']),
                         key=f"{key}_path_button", tooltip=file_obj['path'])
             ]
-        return output
+        return single_list_item
     
     def items_list_generator(self) -> list:
+        """generates layout for List of all registered items
+
+        Returns:
+            list_of_registered_items (list): pysimplegui layout list
+        """
         registered_items = self.get_registered_item_list()
         list_of_registered_items = []
         for i, key in enumerate(registered_items.keys()):
@@ -147,6 +162,8 @@ class shortcut_keeper():
                      font=self.section_normal_font)],
             [sg.Text("with several icons.",
                      font=self.section_normal_font)],
+            [sg.Text("",
+                     font=self.section_normal_font)],
             [sg.Text("This is intended mainly for Windows users",
                      font=self.section_normal_font)],
             [sg.Text("For more information, please visit:",
@@ -167,6 +184,13 @@ class shortcut_keeper():
         layout = [
             [sg.Text("⚙️ Settings", font=self.section_title_font)],
             [sg.HorizontalSeparator()],
+            [
+                sg.Text(
+                    "Personalization: ",
+                    font=self.section_normal_font,
+                    tooltip="Personalization settings"
+                )
+            ],
             [
                 sg.Text(
                     "App ID: ",
@@ -220,6 +244,11 @@ class shortcut_keeper():
     # =================== SETTINGS CRUD ======================
 
     def get_app_window(self):
+        """Getter method for the window object which is used throughout the application
+        
+        Returns:
+            sg.Window (obj): pysimplegui window object
+        """
         return sg.Window(
             self.get_app_title(),
             self.tab_group(), 
@@ -230,6 +259,8 @@ class shortcut_keeper():
     def get_settings(self, setting_file) -> dict:
         """reads data from json file
 
+        Args:
+            setting_file (dict): all the configurations
         Returns:
             data (dict): all settings and config
         """
@@ -327,7 +358,7 @@ class shortcut_keeper():
         """sets app theme
 
         Args:
-            theme (str): theme for the app
+            title (str): title for the app
         """
         self.app_id = title
         self.modify_settings("app_settings.app_id", title)
@@ -338,7 +369,8 @@ class shortcut_keeper():
         """adds/writes path to a file to the config file
 
         Args:
-            path (str): path to file
+            key (str): uuid based key for the specific file
+            file_obj (dict): dictionary containing file information about one file
         """
         registered_items = self.get_registered_item_list()
         registered_items[key] = file_obj
@@ -349,28 +381,46 @@ class shortcut_keeper():
         """deletes/removes path to a file from the config file
 
         Args:
-            index (int): index of the path in the file
+            key (str): uuid based key for the specific file
         """
         registered_items = self.get_registered_item_list()
         del registered_items[key]
         self.modify_settings("fileList", registered_items)
 
-    def get_registered_item_list(self) -> list:
+    def get_registered_item_list(self) -> dict:
         """getter method for list of registered items (filess)
 
         Returns:
-            registered_items (list): list of paths
+            registered_items (dict): dictionary of all file info
         """
-        data = self.get_settings(self.setting_file)
-        return data["fileList"]
+        registered_items = self.get_settings(self.setting_file)["fileList"]
+        return registered_items
     
     # =================== ACTIONS ======================
     
-    def action_switch_tab(self, window, event, values):
+    def action_switch_tab(self, window, event, values) -> None:
+        """Triggers when you switch between tabs.
+        Do all the actions which needs to be done after tab switching
+
+        Args:
+            window (obj): pysimplegui window object
+            event (str): string value for the event
+            values (dict): dictionary containing all the data that is passed with each event
+        """
+        
         # set submit success message to null
         window["-SUBMIT_SUCCESS-"].update("")
         
-    def action_register_item(self, window, event, values):
+    def action_register_item(self, window, event, values) -> None:
+        """Triggers when you register an item.
+        stores the files information in the settings file
+        and reflects the new changes immediately.
+        
+        Args:
+            window (obj): pysimplegui window object
+            event (str): string value for the event
+            values (dict): dictionary containing all the data that is passed with each event
+        """
         path = values["path_input"]
         id = str(uuid.uuid1())
         file_obj = {
@@ -385,38 +435,28 @@ class shortcut_keeper():
         window.extend_layout(window['-ITEM_LIST-'], [self.get_single_list_item(key=id, file_obj=file_obj)])
         window.refresh()
         window['-ITEM_LIST-'].contents_changed()
-        
-    def action_delete_item(self, window, event, values):
-        self.get_app_window().read()
-        
-        key = event.split("__")[0]
-        print(key)
-        file_obj = self.get_settings(self.setting_file)['fileList'][key]
-        pp(file_obj)
-        print("HERE" ,1)
-        self.delete_registered_item(key)
-        print("HERE" ,2)
-        # BOOKMARK:
-        # self.get_app_window().finalize()
-        # self.window['-ITEM_LIST-'].update([])
-        # self.window[key+"__path_button"].Widget.tkpack_forget()
-        # self.window[key+"__path_button"].destroy()
-        # self.get_app_window().read()
-        window["-ITEM_LIST-"].update("")
-        # window.finalize()
-        print("HERE" ,3)
-        
-        # window.extend_layout(window['-ITEM_LIST-'], self.items_list_generator())
-        print("HERE" ,4)
-        
-        # window.close()
-        # window = self.get_app_window()
     
-    def action_open_item(self, window, event, values):
+    def action_open_item(self, window, event, values) -> None:
+        """Triggers when you hit the open file button.
+        executes the selected file immediately using the path stored.
+        
+        Args:
+            window (obj): pysimplegui window object
+            event (str): string value for the event
+            values (dict): dictionary containing all the data that is passed with each event
+        """
         key = event.split("__")[0]
         os.startfile(self.get_registered_item_list()[key]["path"])   
     
-    def action_goto_repo_link(self, window, event, values):
+    def action_goto_repo_link(self, window, event, values) -> None:
+        """Triggers when you click the open the GitHub Repository link.
+        Takes you to the repository for the source code.
+        
+        Args:
+            window (obj): pysimplegui window object
+            event (str): string value for the event
+            values (dict): dictionary containing all the data that is passed with each event
+        """
         os.startfile("https://github.com/Blankscreen-exe/shortcut_keeper")
         
     
@@ -429,11 +469,11 @@ class shortcut_keeper():
 
         while True:
             
+            # NOTE: those events which are not performed using any methods are the ones which uses `window.close()`. 
+            # If they are used withing a separate method of their own, then unexpected behaviour will be observed.
+            
             # read events and their values
             event, values = window.read()
-
-            # MSG: enable for debugging
-            # pp(values)
             
             # EVENT: close app
             if event in (sg.WIN_CLOSED, "WIN_CLOSED", "Exit"):
@@ -449,7 +489,12 @@ class shortcut_keeper():
 
             # EVENT: delete item
             elif event.endswith("__delete_button"):
-                self.action_delete_item(window, event, values)
+                key = event.split("__")[0]
+                file_obj = self.get_settings(self.setting_file)['fileList'][key]
+                self.delete_registered_item(key)
+                
+                window.close()
+                window = self.get_app_window()
 
             # EVENT: open item
             elif event.endswith("__open_button"):
@@ -461,8 +506,6 @@ class shortcut_keeper():
 
             # EVENT: set the theme of the app
             elif event == "set_theme":
-                # FIXME: remove the function call. its muda muda
-                # self.action_set_app_theme(window, event, values)
                 self.reset_app_theme(values["theme_dropdown"])
                 window.close()
                 sg.theme(self.app_theme)
@@ -470,7 +513,6 @@ class shortcut_keeper():
                 
             # EVENT: set the title of the app
             elif event == "set_app_title":
-                # self.action_set_app_title(window, event, values)
                 title = values["new_window_title"]
                 self.reset_app_title(title)
                 window.close()
