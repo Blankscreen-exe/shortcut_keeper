@@ -1,3 +1,5 @@
+![title](./docs/images/title.png)
+
 # Shortcut Keeper (v0.1)
 An icon grouper applet for windows, inspired by icon grouping feature in KDE plasma and android desktops.
 
