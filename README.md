@@ -1,5 +1,7 @@
 ![title](./docs/images/title.png)
 
+> Checkout [version 0.2](https://github.com/Blankscreen-exe/shortcut_keeper/tree/dev)
+
 # Shortcut Keeper (v0.1)
 An icon grouper applet for windows, inspired by icon grouping feature in KDE plasma and android desktops.
 
